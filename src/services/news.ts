@@ -16,14 +16,15 @@ const NEWSDATA_API_KEY = process.env.NEXT_PUBLIC_NEWSDATA_API_KEY;
 // --- GNews API Fetcher (for broad categories) ---
 async function fetchFromGNews(query: string, category: string): Promise<NewsArticle[]> {
   const categoryParam = category.toLowerCase() === 'trending' ? 'general' : category.toLowerCase();
-  const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&language=en&sortBy=publishedAt&apiKey=${GNEWS_API_KEY}`;
+  // Corrected the URL to use the gnews.io endpoint which matches the GNEWS_API_KEY
+  const url = `https://gnews.io/api/v4/search?q=${encodeURIComponent(query)}&lang=en&country=in&category=${categoryParam}&apikey=${GNEWS_API_KEY}`;
   
   try {
     const response = await fetch(url, { next: { revalidate: 3600 } }); // Cache for 1 hour
     const data = await response.json();
 
-    if (data.status !== 'ok') {
-        console.error("GNews/NewsAPI API Error Response:", data.message || response.statusText);
+    if (data.errors) {
+        console.error("GNews API Error Response:", data.errors);
         return [];
     }
     
@@ -32,7 +33,7 @@ async function fetchFromGNews(query: string, category: string): Promise<NewsArti
       headline: item.title,
       content: item.content || item.description,
       url: item.url,
-      imageUrl: item.urlToImage,
+      imageUrl: item.image, // GNews uses 'image' field
       timestamp: new Date(item.publishedAt),
       source: item.source.name,
       district: "API Sourced", // Placeholder, will be replaced
@@ -41,7 +42,7 @@ async function fetchFromGNews(query: string, category: string): Promise<NewsArti
     }));
 
   } catch (error) {
-    console.error('Failed to fetch from GNews/NewsAPI:', error);
+    console.error('Failed to fetch from GNews:', error);
     return [];
   }
 }
